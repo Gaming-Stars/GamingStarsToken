@@ -1,4 +1,4 @@
-# Solidity Vesting Vault for a BEP20 / ERC20 token
+# GamingStars Token & Vesting Vault
 
 ```shell
 npx hardhat compile
