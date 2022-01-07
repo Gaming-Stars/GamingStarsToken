@@ -1,3 +1,5 @@
+allocation*
+
 node_modules
 .env
 coverage

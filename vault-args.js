@@ -1,3 +1,1 @@
-const allAllocations = require('./allAllocations.json');
-
-module.exports = ['0xXXX', '0xYYY'];
+module.exports = ['0xf300e4F1A193Dd047B0C6747aD4E16dedf886297', '1657284723'];

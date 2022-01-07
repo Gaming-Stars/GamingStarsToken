@@ -4,6 +4,12 @@ pragma solidity ^0.8.0;
 import './IBEP20.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 
+struct AllocationInput {
+    address receiver;
+    uint256 amount;
+    bool revocable;
+}
+
 /**
  * @dev BEP20 Vesting contract. Releases the tokens linearly over the duration `VESTING_TERM`.
  * Paid out every `PAYOUT_RATE`.
@@ -17,7 +23,6 @@ contract VestingVault is Ownable {
     event AllocationModified(address indexed receiver, uint256 amount, bool revocable);
 
     struct Allocation {
-        address receiver;
         uint256 amount;
         uint256 claimed;
         bool revocable;
@@ -25,19 +30,13 @@ contract VestingVault is Ownable {
 
     IBEP20 public token;
 
-    uint256 public VESTING_TERM = 2 * 365 days;
-    uint256 public CLIFF_PERIOD = 1 * 30 days;
+    uint256 public VESTING_TERM = 183 days;
     uint256 public PAYOUT_RATE = 1 days;
 
     uint256 public vestingStartDate;
     uint256 public vestingEndDate;
 
     mapping(address => Allocation) public allocations;
-
-    // mapping(address => uint256) public totalClaimed;
-    // mapping(address => uint256) public totalAllocation;
-    // mapping(address => bool) public allowed;
-    // mapping(address => bool) public revocable;
 
     constructor(IBEP20 _token, uint256 _startDate) {
         require(_startDate >= block.timestamp, 'start date cannot lie in the past');
@@ -51,7 +50,7 @@ contract VestingVault is Ownable {
     /**
      * @dev Returns the amount that is claimable by caller.
      */
-    function claimableAmount(address receiver) public view returns (uint256) {
+    function claimableAmount(address receiver) external view returns (uint256) {
         Allocation storage allocation = allocations[receiver];
 
         return calculateReward(allocation.amount, allocation.claimed);
@@ -123,10 +122,9 @@ contract VestingVault is Ownable {
     /**
      * @dev Creates allocations in batches
      */
-    function addAllocationBatch(Allocation[] memory _allocations) external onlyOwner onlyBeforeStart {
-        // XXX: passing in claimed in _allocations is unnecessary
+    function addAllocationBatch(AllocationInput[] memory _allocations) external onlyOwner onlyBeforeStart {
         for (uint256 i; i < _allocations.length; i++) {
-            Allocation memory allocation = _allocations[i];
+            AllocationInput memory allocation = _allocations[i];
             addAllocation(allocation.receiver, allocation.amount, allocation.revocable); // XXX: duplicate modifier checks
         }
     }
@@ -135,7 +133,7 @@ contract VestingVault is Ownable {
         address receiver,
         uint256 amount,
         bool _revocable
-    ) public onlyOwner onlyBeforeStart {
+    ) external onlyOwner onlyBeforeStart {
         Allocation storage allocation = allocations[receiver];
 
         require(allocation.amount != 0, 'no allocation found');

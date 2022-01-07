@@ -43,18 +43,24 @@ module.exports = {
     ],
   },
   networks: {
+    bsc: {
+      url: process.env.PROVIDER_BSC,
+      accounts: [process.env.PRIVATE_KEY],
+      // gasPrice: 6e9,
+    },
     bscTest: {
       url: process.env.PROVIDER_BSC_TEST,
-      accounts: [process.env.PRIVATE_KEY1, process.env.PRIVATE_KEY2],
+      accounts: [process.env.PRIVATE_KEY],
+      // gasPrice: 6e9,
     },
     kovan: {
       url: process.env.PROVIDER_KOVAN,
-      accounts: [process.env.PRIVATE_KEY1, process.env.PRIVATE_KEY2],
-      gasPrice: 10,
+      accounts: [process.env.PRIVATE_KEY],
+      // gasPrice: 10,
     },
     fuji: {
       url: process.env.PROVIDER_FUJI,
-      accounts: [process.env.PRIVATE_KEY1, process.env.PRIVATE_KEY2],
+      accounts: [process.env.PRIVATE_KEY],
       // gasPrice: 10,
     },
   },

@@ -1,50 +1,69 @@
 const hre = require('hardhat');
 const { ethers } = require('hardhat');
-const { dispatchDistribution } = require('../scripts/utils.js');
+const { BigNumber, utils } = require('ethers');
 
-const allAllocations = require('../allAllocations.json');
+const {
+  attachContractsFromConfig,
+  getAllocationsDispatch,
+  getAllocationsTeam,
+  getAllocationsFounders,
+} = require('./utils.js');
+const { formatEther } = require('ethers/lib/utils');
 
-// const tokenAddress = '0x6EE06c269812CB6369e2b1e4ae21851663faD5E1';
-// const vaultAddress = '0xfA0C14A75fAB6548EAa6Dc21A293a251df9DeEBD';
-
-const tokenAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
-const vaultAddress = '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
+const BN = BigNumber.from;
 
 async function main() {
   const [owner, ...signers] = await ethers.getSigners();
 
   console.log('Sender address', owner.address);
 
-  const GamingStars = await ethers.getContractFactory('GamingStars');
-  const VestingVault = await ethers.getContractFactory('VestingVault');
-  const BatchTransfer = await ethers.getContractFactory('BatchTransfer');
+  const allocationsFounders = getAllocationsFounders();
+  const allocationsTeam = getAllocationsTeam();
+  const batchAllocationsDispatch = getAllocationsDispatch();
 
-  const token = await GamingStars.attach(tokenAddress);
+  const allocationsFoundersVested = allocationsFounders.map((allocation) => ({
+    ...allocation,
+    amount: allocation.amount.sub(allocation.amount.mul(BN(20)).div(BN(100))),
+  }));
+  const initialReceivers = allocationsFounders.map(({ receiver }) => receiver);
+  const initialAmounts = allocationsFounders.map(({ amount }) => amount.mul(20).div(100));
 
-  const totalSupply = await token.totalSupply();
-  const symbol = await token.symbol();
-  const name = await token.name();
-  console.log(`\nToken '${name}' (${symbol})', supply`, totalSupply.toString(), 'attached to', token.address);
+  const dispatchReceivers = batchAllocationsDispatch.map(({ receiver, tokens }) => receiver);
+  const dispatchAmounts = batchAllocationsDispatch.map(({ receiver, tokens }) => tokens);
 
-  const vault = await VestingVault.attach(vaultAddress);
+  const sumFounders = sumBN(allocationsFounders.map(({ amount }) => amount));
+  const sumFoundersInitial = sumBN(initialAmounts);
+  const sumFoundersVested = sumBN(allocationsFoundersVested.map(({ amount }) => amount));
+  const sumTeam = sumBN(allocationsTeam.map(({ amount }) => amount));
+  const sumDispatch = sumBN(dispatchAmounts);
 
-  const vestingStartDateContract = await vault.vestingStartDate();
-  const vestingEndDateContract = await vault.vestingEndDate();
-  console.log('Vault attached to:', vault.address);
-  console.log('Vault args:', token.address, vestingStartDateContract.toString());
   console.log(
-    'Vesting term:',
-    new Date(vestingStartDateContract.toNumber() * 1000),
-    '-',
-    new Date(vestingEndDateContract.toNumber() * 1000)
+    'Total sum of tokens founders',
+    formatEther(sumFounders),
+    '(initial)',
+    formatEther(sumFoundersInitial),
+    '(vested)',
+    formatEther(sumFoundersVested)
   );
+  console.log('Total sum of tokens team', formatEther(sumTeam));
+  console.log('Total sum of treasury, etc.', formatEther(sumDispatch));
+  console.log('Full sum', formatEther(sumFounders.add(sumTeam).add(sumDispatch)));
 
-  console.log('deploying batchTransfer');
-  const batchTransfer = await BatchTransfer.deploy();
-  await batchTransfer.deployed();
+  // const { token, vaultFounders, vaultTeam, batchTransfer } = await attachContractsFromConfig();
+  // const totalSupply = await token.totalSupply();
+  // await token.approve(vaultFounders.address, totalSupply);
+  // await token.approve(vaultTeam.address, totalSupply);
+  // let tx = await token.approve(batchTransfer.address, totalSupply);
+  // await tx.wait();
 
-  console.log('dispatching distribution');
-  await dispatchDistribution(token, vault, allAllocations, batchTransfer);
+  // await vaultFounders.addAllocationBatch(allocationsFoundersVested)
+  // await vaultTeam.addAllocationBatch(allocationsTeam)
+  // console.log('start')
+  // console.log(initialAmounts)
+  // await batchTransfer.dispatch(token.address, initialReceivers, initialAmounts)
+  // console.log('done')
+  // console.log(dispatchAmounts)
+  // await batchTransfer.dispatch(token.address, dispatchReceivers, dispatchAmounts)
 }
 
 main()
